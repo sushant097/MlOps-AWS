@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  final-python-thumbnail-1
+
+  Sample SAM Template for final-python-thumbnail-1
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 128
+    CodeUri: handler/
+    Runtime: python3.9
+    Architectures:
+        - x86_64
+    Environment:
+      Variables:
+        THUMBNAIL_SIZE: 128
+        REGION_NAME: "us-east-1"
+        DYNAMODB_TABLE: !Ref ImagesDynamoDbTable
+    Layers:
+      - "arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p39-pillow:1"
+
+Resources:
+  CreateThumbnailFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Handler: app.s3_thumbnail_generator
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ImagesDynamoDbTable
+            
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: 's3:*'
+              Resource: '*'
+      Events:
+        CreateThumbnailEvent:
+          Type: S3 # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Bucket: !Ref SrcBucket
+            Events: s3:ObjectCreated:*
+
+  GetThumbnail:
+    Type: AWS::Serverless::Function
+    Properties: 
+      Handler: app.s3_get_item
+      Policies: 
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesDynamoDbTable
+      
+      Events:
+        GetThumbnailOneEvent:
+          Type: Api
+          Properties:
+            Path: /images/{id}
+            Method: GET
+
+  DeleteThumbnail:
+    Type: AWS::Serverless::Function
+    Properties: 
+      Handler: app.s3_delete_item
+      Policies: 
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ImagesDynamoDbTable
+      
+      Events:
+        DeleteThumbnailEvent:
+          Type: Api
+          Properties: 
+            Path: /images/{id}
+            Method: DELETE
+            
+
+
+  ListThumbnails:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.s3_get_thumbnail_urls
+      Policies: 
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesDynamoDbTable
+
+      Events:
+        ListThumbnailsEvent:
+          Type: Api
+          Properties: 
+            Path: /images
+            Method: GET
+
+  SrcBucket:
+    Type: AWS::S3::Bucket
+
+  ImagesDynamoDbTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      
+      TableName: "images-url-tables"
+
+
+# Outputs:
+  # ThumbnailAPI:
+  #   Description: "API Gateway endpoint URL for Prod stage for Thumbnail function"
+  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/images/"
+  # CreateThumbnailFunction:
+  #   Description: "CreateThumbnailFunction Lambda Function ARN"
+  #   Value: !GetAtt CreateThumbnailFunction.Arn
+  # CreateThumbnailFunctionIamRole:
+  #   Description: "Implicit IAM Role created for Hello World function"
+  #   Value: !GetAtt HelloWorldFunctionRole.Arn
