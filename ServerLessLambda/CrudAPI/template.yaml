@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  python-crud-api
+
+  Sample SAM Template for python-crud-api
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+    Runtime: python3.9
+    Architectures:
+        - x86_64
+    Environment:
+      Variables:
+        DYNAMODB_TABLE: !Ref Table
+        REGION_NAME: !Ref Region
+  # Api:
+  #   TracingEnabled: True # added xray tracing!
+
+Parameters:
+  Table:
+    Type: String
+    Default: Posts
+  Region:
+    Type: String
+    Default: us-east-1
+
+
+Resources:
+  CreatePostFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: handler/create_post
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+
+      Events:
+        CreatePost:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /posts
+            Method: post
+
+  DeletePostFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handler/delete_post
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+      
+      Events:
+        DeletePost:
+          Type: Api
+          Properties: 
+            Path: /posts/{id}
+            Method: delete
+
+  GetPostFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handler/get_post
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+      
+      Events:
+        GetPost:
+          Type: Api
+          Properties: 
+            Path: /posts/{id}
+            Method: get
+  
+  ListPostsFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handler/list_posts
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+      
+      Events:
+        ListPosts:
+          Type: Api
+          Properties: 
+            Path: /posts/
+            Method: get
+  
+  UpdatePostFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handler/update_post
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+      
+      Events:
+        UpdatePost:
+          Type: Api
+          Properties: 
+            Path: /posts/{id}
+            Method: put
+
+  PostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: !Ref Table
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  PostCrudAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/posts/"
+  CreatePostFunction:
+    Description: "CreatePost Lambda Function ARN"
+    Value: !GetAtt CreatePostFunction.Arn
+ 
