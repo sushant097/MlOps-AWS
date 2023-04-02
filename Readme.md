@@ -6,7 +6,7 @@ I try my best documenting every tutorial straight forward, if you find any error
 
 
 ## Table of Contents
-1. [Sagemaker](./Sagemaker)
+1. [MlOps with Sagemaker](./Sagemaker)
 2. [Serverless Lambda](./ServerLessLambda)
 
 
